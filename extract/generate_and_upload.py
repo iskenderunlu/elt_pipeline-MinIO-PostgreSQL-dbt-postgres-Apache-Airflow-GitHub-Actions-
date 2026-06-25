@@ -1,9 +1,11 @@
 """
-Extract katmanı — veri üretimi ve MinIO'ya yükleme.
+Extract layer — data generation and upload to MinIO.
 
-Gerçek hayatta bu script bir API, DB veya dosya sisteminden okurdu.
-Burada pandas ile sahte e-ticaret verisi üretiyoruz.
-Her çalıştırmada sadece yeni kayıtlar (CDC simülasyonu) ekleniyor.
+In a real-world scenario, this script would read data from an API, database, or file system.
+
+Here, we generate mock e-commerce data using pandas.
+
+With each execution, only new records are added (simulating CDC — Change Data Capture).
 """
 
 import os
