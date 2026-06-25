@@ -39,8 +39,8 @@ No AWS or Snowflake account required — uses open-source alternatives.
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/elt-pipeline-local.git
-cd elt-pipeline-local
+git clone https://github.com/iskenderunlu/elt_pipeline-MinIO-PostgreSQL-dbt-postgres-Apache-Airflow-GitHub-Actions-.git
+cd elt_pipeline-MinIO-PostgreSQL-dbt-postgres-Apache-Airflow-GitHub-Actions
 ```
 
 ### 2. Create required directories for Airflow
