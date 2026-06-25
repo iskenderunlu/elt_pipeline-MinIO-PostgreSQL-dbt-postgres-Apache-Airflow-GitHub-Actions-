@@ -14,8 +14,8 @@ clean-targets: ["target", "dbt_packages"]
 models:
   elt_project:
     staging:
-      +materialized: view        # staging → view (her sorgu taze veri)
+      +materialized: view        # staging → view (every query fresh data)
       +schema: staging
     marts:
-      +materialized: table       # marts → table (analitik sorgular hızlı)
+      +materialized: table       # marts → table (analytical queries are fast)
       +schema: marts
