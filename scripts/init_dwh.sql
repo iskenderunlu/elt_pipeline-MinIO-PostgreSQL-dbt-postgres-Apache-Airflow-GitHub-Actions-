@@ -1,15 +1,15 @@
 -- ──────────────────────────────────────────────
--- Data Warehouse şema yapısı (Medallion mimarisi)
--- raw      → S3'ten gelen ham veri
--- staging  → dbt ile temizlenmiş
--- marts    → iş mantığı, analitik sorgular
+-- Data Warehouse Schema (Medallion Architecture)
+-- raw      → Raw Data from S3
+-- staging  → cleaned with dbt
+-- marts    → business logic, analytical queries
 -- ──────────────────────────────────────────────
 
 CREATE SCHEMA IF NOT EXISTS raw;
 CREATE SCHEMA IF NOT EXISTS staging;
 CREATE SCHEMA IF NOT EXISTS marts;
 
--- Ham orders tablosu (S3'ten COPY INTO burada)
+-- Raw orders table
 CREATE TABLE IF NOT EXISTS raw.orders (
     order_id        TEXT PRIMARY KEY,
     customer_id     TEXT,
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS raw.orders (
     _loaded_at      TIMESTAMP DEFAULT NOW()
 );
 
--- Ham customers tablosu
+-- Raw customers table
 CREATE TABLE IF NOT EXISTS raw.customers (
     customer_id     TEXT PRIMARY KEY,
     customer_name   TEXT,
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS raw.customers (
     _loaded_at      TIMESTAMP DEFAULT NOW()
 );
 
--- Ham products tablosu
+-- Raw products table
 CREATE TABLE IF NOT EXISTS raw.products (
     product_id      TEXT PRIMARY KEY,
     product_name    TEXT,
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS raw.products (
     _loaded_at      TIMESTAMP DEFAULT NOW()
 );
 
--- Incremental load için watermark tablosu
+-- Watermark table for Incremental load
 CREATE TABLE IF NOT EXISTS raw._load_watermarks (
     table_name      TEXT PRIMARY KEY,
     last_loaded_at  TIMESTAMP
