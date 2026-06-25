@@ -23,7 +23,7 @@ SELECT
     c.country_code,
     c.signup_date,
 
-    -- Order metrikleri
+    -- Order metrics
     COALESCE(os.total_orders, 0)        AS total_orders,
     COALESCE(os.total_spent, 0)         AS total_spent_usd,
     COALESCE(os.delivered_revenue, 0)   AS delivered_revenue_usd,
