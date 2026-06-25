@@ -1,0 +1,52 @@
+version: 2
+
+models:
+
+  - name: stg_orders
+    description: "Temizlenmiş sipariş kayıtları"
+    columns:
+      - name: order_id
+        description: "Benzersiz sipariş ID"
+        tests:
+          - unique
+          - not_null
+      - name: customer_id
+        tests:
+          - not_null
+      - name: order_date
+        tests:
+          - not_null
+      - name: status
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['PENDING', 'SHIPPED', 'DELIVERED', 'CANCELLED']
+      - name: amount_usd
+        tests:
+          - not_null
+      - name: quantity
+        tests:
+          - not_null
+
+  - name: stg_customers
+    description: "Temizlenmiş müşteri kayıtları"
+    columns:
+      - name: customer_id
+        tests:
+          - unique
+          - not_null
+      - name: email
+        tests:
+          - not_null
+          - unique
+
+  - name: stg_products
+    description: "Ürün kataloğu"
+    columns:
+      - name: product_id
+        tests:
+          - unique
+          - not_null
+      - name: unit_price
+        tests:
+          - not_null

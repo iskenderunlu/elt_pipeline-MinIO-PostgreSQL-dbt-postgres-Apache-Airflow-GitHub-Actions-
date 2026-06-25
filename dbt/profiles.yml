@@ -1,0 +1,15 @@
+# dbt bağlantı profili — PostgreSQL DWH
+# Airflow container içinde /opt/airflow/dbt/profiles.yml olarak mount edilir.
+
+elt_project:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('DWH_HOST', 'postgres-dwh') }}"
+      port: "{{ env_var('DWH_PORT', '5432') | int }}"
+      dbname: "{{ env_var('DWH_DB', 'dwh') }}"
+      user: "{{ env_var('DWH_USER', 'dwh') }}"
+      password: "{{ env_var('DWH_PASSWORD', 'dwh') }}"
+      schema: staging      # dbt'nin default hedef schema'sı
+      threads: 4

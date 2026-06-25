@@ -1,0 +1,101 @@
+"""
+ELT Pipeline DAG
+
+Akış:
+  extract_to_minio  →  load_to_dwh  →  dbt_run  →  dbt_test
+
+Zamanlama: her gün gece yarısı (UTC)
+Retry: her task 2 kez, 5 dakika ara ile
+"""
+
+from __future__ import annotations
+
+import sys
+import logging
+from datetime import datetime, timedelta
+
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from airflow.operators.bash import BashOperator
+from airflow.utils.dates import days_ago
+
+log = logging.getLogger(__name__)
+
+# Airflow container'da extract modülleri bu path'te
+sys.path.insert(0, "/opt/airflow/extract")
+
+# ── Varsayılan task argümanları ─────────────────────────────────────────────
+default_args = {
+    "owner":            "data-team",
+    "depends_on_past":  False,
+    "retries":          2,
+    "retry_delay":      timedelta(minutes=5),
+    "email_on_failure": False,   # gerçek projede True yapılır
+}
+
+# ── DAG tanımı ──────────────────────────────────────────────────────────────
+with DAG(
+    dag_id="elt_pipeline",
+    description="MinIO → PostgreSQL DWH → dbt transform",
+    schedule_interval="0 0 * * *",   # her gün 00:00 UTC
+    start_date=days_ago(1),
+    default_args=default_args,
+    catchup=False,
+    tags=["elt", "dbt", "minio", "postgres"],
+) as dag:
+
+    # ── Task 1: Extract — veri üret ve MinIO'ya yükle ───────────────────────
+    def _extract(**context):
+        from generate_and_upload import run
+        execution_date = context["execution_date"]
+        result = run(execution_date=execution_date)
+        log.info(f"Extract sonucu: {result}")
+        # XCom'a yaz — bir sonraki task okuyabilir
+        return result
+
+    extract_task = PythonOperator(
+        task_id="extract_to_minio",
+        python_callable=_extract,
+    )
+
+    # ── Task 2: Load — MinIO'dan DWH'ye kopyala ─────────────────────────────
+    def _load(**context):
+        from load_to_dwh import run
+        execution_date = context["execution_date"]
+        run(execution_date=execution_date)
+
+    load_task = PythonOperator(
+        task_id="load_to_dwh",
+        python_callable=_load,
+    )
+
+    # ── Task 3: dbt run — staging + mart modellerini oluştur ────────────────
+    dbt_run = BashOperator(
+        task_id="dbt_run",
+        bash_command=(
+            "cd /opt/airflow/dbt/elt_project && "
+            "dbt run --profiles-dir /opt/airflow/dbt"
+        ),
+    )
+
+    # ── Task 4: dbt test — veri kalitesi kontrolü ───────────────────────────
+    dbt_test = BashOperator(
+        task_id="dbt_test",
+        bash_command=(
+            "cd /opt/airflow/dbt/elt_project && "
+            "dbt test --profiles-dir /opt/airflow/dbt"
+        ),
+    )
+
+    # ── Task 5: dbt docs — lineage grafiği oluştur (opsiyonel) ─────────────
+    dbt_docs = BashOperator(
+        task_id="dbt_docs_generate",
+        bash_command=(
+            "cd /opt/airflow/dbt/elt_project && "
+            "dbt docs generate --profiles-dir /opt/airflow/dbt"
+        ),
+        trigger_rule="all_success",
+    )
+
+    # ── Bağımlılık zinciri ───────────────────────────────────────────────────
+    extract_task >> load_task >> dbt_run >> dbt_test >> dbt_docs

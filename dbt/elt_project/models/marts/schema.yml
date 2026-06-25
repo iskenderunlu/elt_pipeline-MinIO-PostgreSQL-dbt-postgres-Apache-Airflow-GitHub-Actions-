@@ -1,0 +1,31 @@
+version: 2
+
+models:
+
+  - name: fct_orders
+    description: "Sipariş fact tablosu — analitik ana tablo"
+    columns:
+      - name: order_id
+        tests: [unique, not_null]
+      - name: customer_id
+        tests: [not_null]
+      - name: order_date
+        tests: [not_null]
+      - name: amount_usd
+        tests: [not_null]
+      - name: status
+        tests:
+          - accepted_values:
+              values: ['PENDING', 'SHIPPED', 'DELIVERED', 'CANCELLED']
+      - name: revenue
+        description: "Sadece DELIVERED siparişlerde gelir yazılır"
+
+  - name: dim_customers
+    description: "Müşteri boyut tablosu — segmentasyon ve özet metrikler"
+    columns:
+      - name: customer_id
+        tests: [unique, not_null]
+      - name: customer_segment
+        tests:
+          - accepted_values:
+              values: ['VIP', 'Regular', 'New']

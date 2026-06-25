@@ -1,0 +1,85 @@
+name: dbt CI
+
+# PR açıldığında veya main'e push yapıldığında çalışır
+on:
+  pull_request:
+    paths:
+      - 'dbt/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'dbt/**'
+
+jobs:
+  dbt-ci:
+    name: dbt compile & test
+    runs-on: ubuntu-latest
+
+    services:
+      # CI ortamında gerçek bir PostgreSQL ayağa kaldır
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: dwh
+          POSTGRES_PASSWORD: dwh
+          POSTGRES_DB: dwh
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-retries 5
+
+    env:
+      DWH_HOST: localhost
+      DWH_PORT: 5432
+      DWH_DB: dwh
+      DWH_USER: dwh
+      DWH_PASSWORD: dwh
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install dbt-postgres psycopg2-binary
+
+      - name: Init DWH schema (raw tables)
+        run: |
+          psql postgresql://dwh:dwh@localhost:5432/dwh \
+            -f scripts/init_dwh.sql
+
+      - name: dbt deps
+        working-directory: dbt/elt_project
+        run: dbt deps --profiles-dir ../
+
+      - name: dbt compile (SQL syntax kontrolü)
+        working-directory: dbt/elt_project
+        run: dbt compile --profiles-dir ../
+
+      - name: dbt run (staging modelleri)
+        working-directory: dbt/elt_project
+        run: dbt run --select staging --profiles-dir ../
+
+      - name: dbt test (staging testleri)
+        working-directory: dbt/elt_project
+        run: dbt test --select staging --profiles-dir ../
+
+      - name: dbt docs generate
+        working-directory: dbt/elt_project
+        run: dbt docs generate --profiles-dir ../
+
+      - name: Upload dbt docs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbt-docs
+          path: dbt/elt_project/target/
+          retention-days: 7
