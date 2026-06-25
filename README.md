@@ -22,7 +22,7 @@ No AWS or Snowflake account required — uses open-source alternatives.
 | Airflow | AWS MWAA / GCP Composer | Orchestration |
 | GitHub Actions | Same | CI/CD |
 
-## Results (for your CV)
+## Results
 
 - Loads ~50K rows per day from MinIO → PostgreSQL in **< 30 seconds**
 - **9 automated dbt tests** (unique, not_null, accepted_values, custom)
