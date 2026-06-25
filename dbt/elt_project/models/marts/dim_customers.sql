@@ -1,4 +1,4 @@
--- Boyut tablosu: müşteri segmentasyonu ve özet metrikler
+-- Dimension Table: Customer Segmentation and summary metrics
 
 {{ config(materialized='table') }}
 
