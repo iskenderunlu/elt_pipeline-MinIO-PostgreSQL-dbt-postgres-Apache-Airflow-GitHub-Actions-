@@ -1,49 +1,49 @@
 # Cloud-Native ELT Pipeline (Local / Free Stack)
 
-Free, Modern ELT pipeline based on Dcoker  
-No need for AWS ve Snowflake
+A fully free, Docker-based modern ELT pipeline.
+No AWS or Snowflake account required — uses open-source alternatives.
 
-## Mimari
+## Architecture
 
 ```
 [Data Generator]  →  [MinIO / S3]  →  [PostgreSQL DWH]  →  [dbt]  →  [Analytics]
-     Python           raw/              raw schema         staging      marts
-                    parquet            + watermark         + tests
-                                                             ↑
-                                                         [Airflow]
-                                                          scheduler
+     Python             raw/              raw schema         staging      marts
+                       parquet           + watermark         + tests
+                                                               ↑
+                                                           [Airflow]
+                                                            scheduler
 ```
 
-| Araç | Üretim karşılığı | Açıklama |
-|------|-------------------|---------|
-| MinIO | AWS S3 | S3 uyumlu obje depolama, aynı boto3 kodu çalışır |
+| Tool | Production equivalent | Description |
+|------|-----------------------|-------------|
+| MinIO | AWS S3 | S3-compatible object storage — same boto3 code works |
 | PostgreSQL | Snowflake / Redshift | Data warehouse |
-| dbt-postgres | dbt-snowflake | Aynı dbt, connector farklı |
+| dbt-postgres | dbt-snowflake | Same dbt, different connector |
 | Airflow | AWS MWAA / GCP Composer | Orchestration |
-| GitHub Actions | Aynı | CI/CD |
+| GitHub Actions | Same | CI/CD |
 
-## Sonuçlar (CV için)
+## Results (for your CV)
 
-- Günlük ~50K satır veriyi MinIO → PostgreSQL'e **< 30 saniyede** yükler
-- dbt ile **9 otomatik test** (unique, not_null, accepted_values, custom)
-- CI/CD: her PR'da dbt compile + test + docs generate (~2 dk)
-- Airflow retry mekanizması ile hata dayanıklılığı
+- Loads ~50K rows per day from MinIO → PostgreSQL in **< 30 seconds**
+- **9 automated dbt tests** (unique, not_null, accepted_values, custom)
+- CI/CD: automatic dbt compile + test + docs generate on every PR (~2 min)
+- Fault tolerance via Airflow retry mechanism
 
-## Kurulum
+## Setup
 
-### Ön koşullar
-- Docker Desktop (veya Docker Engine + Compose)
+### Prerequisites
+- Docker Desktop (or Docker Engine + Compose)
 - Git
-- 4 GB RAM (Airflow için)
+- 4 GB RAM (required by Airflow)
 
-### 1. Projeyi klonla
+### 1. Clone the repository
 
 ```bash
-git clone https://github.com/KULLANICI_ADIN/elt-pipeline-local.git
+git clone https://github.com/YOUR_USERNAME/elt-pipeline-local.git
 cd elt-pipeline-local
 ```
 
-### 2. Airflow için gerekli dizinleri oluştur
+### 2. Create required directories for Airflow
 
 ```bash
 mkdir -p logs
@@ -51,23 +51,23 @@ echo "AIRFLOW_UID=$(id -u)" > .env   # Linux/Mac
 # Windows PowerShell: "AIRFLOW_UID=50000" | Out-File -Encoding ascii .env
 ```
 
-### 3. Servisleri başlat
+### 3. Start the services
 
 ```bash
-# İlk başlatma (airflow-init tamamlanana kadar bekle ~2-3 dk)
+# First-time init (wait for airflow-init to complete ~2-3 min)
 docker compose up airflow-init
 
-# Arka planda çalıştır
+# Run in the background
 docker compose up -d
 ```
 
-### 4. Servislerin ayakta olduğunu kontrol et
+### 4. Verify all services are running
 
 ```bash
 docker compose ps
 ```
 
-Beklenen çıktı — hepsi `healthy` veya `running` olmalı:
+Expected output — all services should be `healthy` or `running`:
 ```
 NAME                  STATUS
 airflow-webserver     running (healthy)
@@ -77,82 +77,82 @@ postgres-airflow      running (healthy)
 postgres-dwh          running (healthy)
 ```
 
-### 5. Arayüzlere bağlan
+### 5. Access the UIs
 
-| Servis | URL | Kullanıcı | Şifre |
-|--------|-----|-----------|-------|
+| Service | URL | Username | Password |
+|---------|-----|----------|----------|
 | Airflow UI | http://localhost:8080 | admin | admin |
 | MinIO UI | http://localhost:9001 | minioadmin | minioadmin |
 | PostgreSQL DWH | localhost:5433 | dwh | dwh |
 
-### 6. Pipeline'ı manuel çalıştır
+### 6. Trigger the pipeline manually
 
 Airflow UI → DAGs → `elt_pipeline` → Trigger DAG ▶
 
-Veya komut satırından:
+Or from the command line:
 ```bash
 docker compose exec airflow-scheduler \
   airflow dags trigger elt_pipeline
 ```
 
-### 7. Sonuçları kontrol et
+### 7. Query the results
 
 ```bash
-# DWH'ye bağlan ve sorgula
+# Connect to the DWH and run queries
 psql postgresql://dwh:dwh@localhost:5433/dwh
 
--- Ham veri
+-- Raw data
 SELECT COUNT(*) FROM raw.orders;
 
 -- Staging (dbt view)
 SELECT * FROM staging.stg_orders LIMIT 5;
 
--- Mart (analitik tablo)
-SELECT product_category, SUM(revenue) as total_revenue
+-- Mart (analytics table)
+SELECT product_category, SUM(revenue) AS total_revenue
 FROM marts.fct_orders
 GROUP BY 1
 ORDER BY 2 DESC;
 
--- Müşteri segmentleri
+-- Customer segments
 SELECT customer_segment, COUNT(*), AVG(total_spent_usd)
 FROM marts.dim_customers
 GROUP BY 1;
 ```
 
-## Proje yapısı
+## Project structure
 
 ```
 elt_pipeline/
-├── docker-compose.yml          ← tüm servisler burada
+├── docker-compose.yml          ← all services defined here
 ├── dags/
-│   └── elt_pipeline_dag.py     ← Airflow DAG (4 task)
+│   └── elt_pipeline_dag.py     ← Airflow DAG (4 tasks)
 ├── extract/
-│   ├── generate_and_upload.py  ← Extract: veri üret → MinIO
+│   ├── generate_and_upload.py  ← Extract: generate data → MinIO
 │   └── load_to_dwh.py          ← Load: MinIO → PostgreSQL
 ├── dbt/
-│   ├── profiles.yml            ← PostgreSQL bağlantısı
+│   ├── profiles.yml            ← PostgreSQL connection
 │   └── elt_project/
 │       ├── dbt_project.yml
 │       ├── models/
-│       │   ├── staging/        ← raw → temizlenmiş view'lar
+│       │   ├── staging/        ← raw → cleaned views
 │       │   │   ├── sources.yml
-│       │   │   ├── schema.yml  ← 6 otomatik test
+│       │   │   ├── schema.yml  ← 6 automated tests
 │       │   │   ├── stg_orders.sql
 │       │   │   ├── stg_customers.sql
 │       │   │   └── stg_products.sql
-│       │   └── marts/          ← analitik tablolar
-│       │       ├── schema.yml  ← 3 otomatik test
+│       │   └── marts/          ← analytics tables
+│       │       ├── schema.yml  ← 3 automated tests
 │       │       ├── fct_orders.sql
 │       │       └── dim_customers.sql
 │       ├── tests/
-│       │   └── assert_no_future_orders.sql  ← özel test
+│       │   └── assert_no_future_orders.sql  ← custom singular test
 │       └── macros/
 │           └── cents_to_dollars.sql
 ├── scripts/
-│   └── init_dwh.sql            ← DWH şema oluşturma
+│   └── init_dwh.sql            ← DWH schema initialisation
 └── .github/
     └── workflows/
-        └── dbt_ci.yml          ← PR'da otomatik test
+        └── dbt_ci.yml          ← automated tests on every PR
 ```
 
 ## dbt lineage
@@ -166,16 +166,15 @@ raw.products ────┘   └─ dim_customers └── dim_customers
                      stg_products ───┘
 ```
 
-## Durdurma
+## Stopping the stack
 
 ```bash
-docker compose down          # servisleri durdur, volume'ları koru
-docker compose down -v       # her şeyi sil (temiz başlangıç)
+docker compose down          # stop services, keep volumes
+docker compose down -v       # remove everything (clean slate)
 ```
 
-## Sorun giderme
+## Troubleshooting
 
-**Airflow başlamıyor:** `docker compose logs airflow-init` ile log'a bak.  
-**dbt bağlanmıyor:** `docker compose exec airflow-scheduler dbt debug --profiles-dir /opt/airflow/dbt` çalıştır.  
-**MinIO bucket yok:** `docker compose restart minio-init` ile bucket'ları yeniden oluştur.
-# elt_pipeline-MinIO-PostgreSQL-dbt-postgres-Apache-Airflow-GitHub-Actions-
+**Airflow won't start:** Check logs with `docker compose logs airflow-init`.  
+**dbt can't connect:** Run `docker compose exec airflow-scheduler dbt debug --profiles-dir /opt/airflow/dbt`.  
+**MinIO bucket missing:** Recreate buckets with `docker compose restart minio-init`.
