@@ -1,12 +1,14 @@
 """
-Load katmanı — MinIO'daki parquet dosyalarını PostgreSQL DWH'ye yükler.
+Load layer — loads parquet files from MinIO into PostgreSQL DWH.
 
-Strateji:
-  - customers / products: TRUNCATE + INSERT (tam snapshot, küçük tablolar)
-  - orders:               sadece o günün partition'ı INSERT (incremental)
+Strategy:
 
-Gerçek hayatta Snowflake'in COPY INTO komutu bu işi tek satırda yapardı.
-PostgreSQL'de aynı şeyi psycopg2 + COPY FROM STDIN ile yapıyoruz.
+customers / products: TRUNCATE + INSERT (full snapshot, small tables)
+orders:               INSERT only the current day's partition (incremental)
+
+In real life, Snowflake's COPY INTO command would handle this in a single line.
+
+In PostgreSQL, we achieve the same thing using psycopg2 + COPY FROM STDIN.
 """
 
 import os
@@ -23,7 +25,7 @@ from botocore.config import Config
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
-# ── Bağlantı ayarları ────────────────────────────────────────────────────────
+# ── Connection Config ────────────────────────────────────────────────────────
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "http://localhost:9000")
 AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID", "minioadmin")
 AWS_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "minioadmin")
@@ -55,13 +57,13 @@ def get_conn():
 
 
 def read_parquet_from_s3(s3, key: str) -> pd.DataFrame:
-    """S3'teki parquet dosyasını bellekte DataFrame'e çevirir."""
+    """It converts parquet file in S3 to DataFrame in memory."""
     obj = s3.get_object(Bucket=BUCKET, Key=key)
     return pd.read_parquet(io.BytesIO(obj["Body"].read()))
 
 
 def bulk_insert(conn, df: pd.DataFrame, table: str, columns: list):
-    """psycopg2 execute_values ile hızlı toplu insert."""
+    """Fast Collective Insert with psycopg2 execute_values"""
     rows = [tuple(row[c] for c in columns) for _, row in df.iterrows()]
     cols = ", ".join(columns)
     placeholders = "(" + ", ".join(["%s"] * len(columns)) + ")"
@@ -100,7 +102,7 @@ def load_orders(s3, conn, dt: str):
                 ["order_id", "customer_id", "order_date", "status",
                  "amount", "product_id", "quantity"])
 
-    # Watermark'ı güncelle
+    # Update Watermark
     with conn.cursor() as cur:
         cur.execute("""
             INSERT INTO raw._load_watermarks (table_name, last_loaded_at)
