@@ -3,7 +3,7 @@ version: 2
 models:
 
   - name: fct_orders
-    description: "Sipariş fact tablosu — analitik ana tablo"
+    description: "Order fact table — analytical main table"
     columns:
       - name: order_id
         tests: [unique, not_null]
@@ -21,7 +21,7 @@ models:
         description: "Sadece DELIVERED siparişlerde gelir yazılır"
 
   - name: dim_customers
-    description: "Müşteri boyut tablosu — segmentasyon ve özet metrikler"
+    description: "Customer dimension table — segmentation and summary metrics"
     columns:
       - name: customer_id
         tests: [unique, not_null]
