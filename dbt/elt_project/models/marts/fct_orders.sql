@@ -1,5 +1,5 @@
 -- Fact table: order + customer + product union
--- Analitik sorgular buradan çalışır.
+-- Analytical queries are executed from here.
 
 {{ config(materialized='table') }}
 
