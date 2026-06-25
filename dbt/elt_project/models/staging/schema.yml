@@ -3,10 +3,10 @@ version: 2
 models:
 
   - name: stg_orders
-    description: "Temizlenmiş sipariş kayıtları"
+    description: "Cleaned order records"
     columns:
       - name: order_id
-        description: "Benzersiz sipariş ID"
+        description: "Unique order ID"
         tests:
           - unique
           - not_null
@@ -29,7 +29,7 @@ models:
           - not_null
 
   - name: stg_customers
-    description: "Temizlenmiş müşteri kayıtları"
+    description: "Cleaned Customer records"
     columns:
       - name: customer_id
         tests:
@@ -41,7 +41,7 @@ models:
           - unique
 
   - name: stg_products
-    description: "Ürün kataloğu"
+    description: "Product Catalogue"
     columns:
       - name: product_id
         tests:
