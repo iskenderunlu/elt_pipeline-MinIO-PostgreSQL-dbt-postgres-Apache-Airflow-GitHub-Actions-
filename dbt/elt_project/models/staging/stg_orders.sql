@@ -1,5 +1,6 @@
--- Staging: ham orders → temiz tipler, normalize edilmiş değerler
--- Bu katmanda sadece temizlik yapılır, iş mantığı eklenmez.
+-- Staging: raw orders → cleaned types, normalized values
+-- Only data cleansing is performed in this layer; no business logic is applied.
+
 
 {{ config(materialized='view') }}
 
