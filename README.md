@@ -1,12 +1,12 @@
 # Cloud-Native ELT Pipeline (Local / Free Stack)
 
-Tamamen ücretsiz, Docker tabanlı modern ELT pipeline.  
-AWS ve Snowflake **gerektirmez** — açık kaynak alternatifleri kullanır.
+Free, Modern ELT pipeline based on Dcoker  
+No need for AWS ve Snowflake
 
 ## Mimari
 
 ```
-[Veri Üretici]  →  [MinIO / S3]  →  [PostgreSQL DWH]  →  [dbt]  →  [Analitik]
+[Data Generator]  →  [MinIO / S3]  →  [PostgreSQL DWH]  →  [dbt]  →  [Analytics]
      Python           raw/              raw schema         staging      marts
                     parquet            + watermark         + tests
                                                              ↑
