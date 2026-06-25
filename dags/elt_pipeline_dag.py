@@ -1,11 +1,11 @@
 """
 ELT Pipeline DAG
 
-Akış:
+Flow:
   extract_to_minio  →  load_to_dwh  →  dbt_run  →  dbt_test
 
-Zamanlama: her gün gece yarısı (UTC)
-Retry: her task 2 kez, 5 dakika ara ile
+Zamanlama: every midnight (UTC)
+Retry: each tak 2 times, in a period of 5 minutes
 """
 
 from __future__ import annotations
