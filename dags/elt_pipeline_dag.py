@@ -4,7 +4,7 @@ ELT Pipeline DAG
 Flow:
   extract_to_minio  →  load_to_dwh  →  dbt_run  →  dbt_test
 
-Zamanlama: every midnight (UTC)
+Timing: every midnight (UTC)
 Retry: each tak 2 times, in a period of 5 minutes
 """
 
@@ -21,10 +21,10 @@ from airflow.utils.dates import days_ago
 
 log = logging.getLogger(__name__)
 
-# Airflow container'da extract modülleri bu path'te
+# The Extract modules in airflow container in this path
 sys.path.insert(0, "/opt/airflow/extract")
 
-# ── Varsayılan task argümanları ─────────────────────────────────────────────
+# ── Default task arguments ─────────────────────────────────────────────
 default_args = {
     "owner":            "data-team",
     "depends_on_past":  False,
@@ -33,7 +33,7 @@ default_args = {
     "email_on_failure": False,   # gerçek projede True yapılır
 }
 
-# ── DAG tanımı ──────────────────────────────────────────────────────────────
+# ── DAG Definition ──────────────────────────────────────────────────────────────
 with DAG(
     dag_id="elt_pipeline",
     description="MinIO → PostgreSQL DWH → dbt transform",
@@ -44,7 +44,7 @@ with DAG(
     tags=["elt", "dbt", "minio", "postgres"],
 ) as dag:
 
-    # ── Task 1: Extract — veri üret ve MinIO'ya yükle ───────────────────────
+    # ── Task 1: Extract — generate data and upload onto MinIO ───────────────────────
     def _extract(**context):
         from generate_and_upload import run
         execution_date = context["execution_date"]
@@ -58,7 +58,7 @@ with DAG(
         python_callable=_extract,
     )
 
-    # ── Task 2: Load — MinIO'dan DWH'ye kopyala ─────────────────────────────
+    # ── Task 2: Load — Copy from MinIO to DWH ─────────────────────────────
     def _load(**context):
         from load_to_dwh import run
         execution_date = context["execution_date"]
@@ -69,7 +69,7 @@ with DAG(
         python_callable=_load,
     )
 
-    # ── Task 3: dbt run — staging + mart modellerini oluştur ────────────────
+    # ── Task 3: dbt run — it creates staging + mart models ────────────────
     dbt_run = BashOperator(
         task_id="dbt_run",
         bash_command=(
@@ -78,7 +78,7 @@ with DAG(
         ),
     )
 
-    # ── Task 4: dbt test — veri kalitesi kontrolü ───────────────────────────
+    # ── Task 4: dbt test — Data quality control ───────────────────────────
     dbt_test = BashOperator(
         task_id="dbt_test",
         bash_command=(
@@ -87,7 +87,7 @@ with DAG(
         ),
     )
 
-    # ── Task 5: dbt docs — lineage grafiği oluştur (opsiyonel) ─────────────
+    # ── Task 5: dbt docs — creates lineage graph (optional) ─────────────
     dbt_docs = BashOperator(
         task_id="dbt_docs_generate",
         bash_command=(
@@ -97,5 +97,5 @@ with DAG(
         trigger_rule="all_success",
     )
 
-    # ── Bağımlılık zinciri ───────────────────────────────────────────────────
+    # ── Dependency Chain ───────────────────────────────────────────────────
     extract_task >> load_task >> dbt_run >> dbt_test >> dbt_docs
