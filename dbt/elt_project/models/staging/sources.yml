@@ -3,14 +3,14 @@ version: 2
 sources:
   - name: raw
     schema: raw
-    description: "MinIO'dan yüklenen ham veriler"
+    description: "Raw Data loaded from MinIO"
     tables:
 
       - name: orders
-        description: "Ham sipariş kayıtları (tip dönüşümü yapılmamış)"
+        description: "Raw order records (without type conversion)"
         columns:
           - name: order_id
-            description: "Sipariş ID — benzersiz olmalı"
+            description: "Order ID — it must be unique"
           - name: customer_id
           - name: order_date
           - name: status
@@ -19,12 +19,12 @@ sources:
           - name: quantity
 
       - name: customers
-        description: "Müşteri kayıtları"
+        description: "Customer Records"
         columns:
           - name: customer_id
             description: "Müşteri ID"
 
       - name: products
-        description: "Ürün kataloğu"
+        description: "Product Catalogue"
         columns:
           - name: product_id
