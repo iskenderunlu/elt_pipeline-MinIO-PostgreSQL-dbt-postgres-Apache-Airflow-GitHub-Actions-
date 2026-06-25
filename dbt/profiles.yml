@@ -1,5 +1,5 @@
-# dbt bağlantı profili — PostgreSQL DWH
-# Airflow container içinde /opt/airflow/dbt/profiles.yml olarak mount edilir.
+# dbt connection profile — PostgreSQL DWH
+# It is mounted as /opt/airflow/dbt/profiles.yml in Airflow container.
 
 elt_project:
   target: dev
