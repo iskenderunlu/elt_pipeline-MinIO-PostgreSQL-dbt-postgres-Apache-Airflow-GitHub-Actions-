@@ -22,13 +22,13 @@ from botocore.config import Config
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
-# ── Bağlantı ayarları (env'den okunur, docker-compose'da tanımlı) ──────────
+# ── Connection Configuration (it reads from env, defined in docker-compose'da) ──────────
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "http://localhost:9000")
 AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID", "minioadmin")
 AWS_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "minioadmin")
 BUCKET          = os.getenv("MINIO_BUCKET", "elt-pipeline-raw")
 
-# ── S3 client (MinIO uyumlu) ───────────────────────────────────────────────
+# ── S3 client (MinIO integratable) ───────────────────────────────────────────────
 def get_s3_client():
     return boto3.client(
         "s3",
@@ -40,7 +40,7 @@ def get_s3_client():
     )
 
 
-# ── Veri üretimi ────────────────────────────────────────────────────────────
+# ── Data Generator ────────────────────────────────────────────────────────────
 CITIES    = ["Istanbul", "Ankara", "Izmir", "Bursa", "Antalya"]
 COUNTRIES = ["TR"]
 STATUSES  = ["PENDING", "SHIPPED", "DELIVERED", "CANCELLED"]
@@ -72,7 +72,7 @@ def generate_products():
     ])
 
 def generate_orders(execution_date: datetime, n_per_day=50):
-    """Her çalıştırmada o günün siparişlerini üretir (CDC simülasyonu)."""
+    """Each execution generates the orders for that day (CDC simulation)."""
     rows = []
     for i in range(n_per_day):
         product = random.choice(PRODUCTS)
@@ -89,9 +89,9 @@ def generate_orders(execution_date: datetime, n_per_day=50):
     return pd.DataFrame(rows)
 
 
-# ── S3 / MinIO yükleme ──────────────────────────────────────────────────────
+# ── S3 / MinIO upload ──────────────────────────────────────────────────────
 def upload_parquet(s3, df: pd.DataFrame, key: str):
-    """DataFrame'i bellekte parquet'e çevirir ve S3'e yükler (disk yok)."""
+    """Converts the DataFrame to Parquet in memory and uploads it to S3 (without using disk storage)."""
     buffer = io.BytesIO()
     df.to_parquet(buffer, index=False, engine="pyarrow")
     buffer.seek(0)
@@ -104,23 +104,23 @@ def run(execution_date: datetime = None):
         execution_date = datetime.utcnow()
 
     dt = execution_date.strftime("%Y-%m-%d")
-    log.info(f"Extract başlıyor — tarih: {dt}")
+    log.info(f"Extract starts — date: {dt}")
 
     s3 = get_s3_client()
 
-    # 1. Customers — her zaman tam snapshot (küçük referans tablo)
+    # 1. Customers — always complete snapshot (small reference table)
     customers = generate_customers(200)
     upload_parquet(s3, customers, f"raw/customers/dt={dt}/customers.parquet")
 
-    # 2. Products — her zaman tam snapshot
+    # 2. Products — always complete snapshot
     products = generate_products()
     upload_parquet(s3, products, f"raw/products/dt={dt}/products.parquet")
 
-    # 3. Orders — sadece o günün kayıtları (incremental / CDC)
+    # 3. Orders — just records in that day (incremental / CDC)
     orders = generate_orders(execution_date, n_per_day=50)
     upload_parquet(s3, orders, f"raw/orders/dt={dt}/orders.parquet")
 
-    log.info("Extract tamamlandı.")
+    log.info("Extract completed.")
     return {"date": dt, "orders": len(orders), "customers": len(customers)}
 
 
