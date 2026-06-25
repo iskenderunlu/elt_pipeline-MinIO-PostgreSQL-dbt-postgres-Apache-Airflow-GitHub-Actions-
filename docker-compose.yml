@@ -9,11 +9,11 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__WEBSERVER__SECRET_KEY: 'elt-pipeline-secret-key-change-in-prod'
-    # MinIO / S3 credentials (Airflow tarafından kullanılacak)
+    # MinIO / S3 credentials (used by Airflow)
     AWS_ACCESS_KEY_ID: minioadmin
     AWS_SECRET_ACCESS_KEY: minioadmin
     AWS_DEFAULT_REGION: us-east-1
-    # Data warehouse (PostgreSQL) bağlantısı
+    # Data warehouse (PostgreSQL) connection
     DWH_HOST: postgres-dwh
     DWH_PORT: '5432'
     DWH_DB: dwh
@@ -51,7 +51,7 @@ services:
     networks:
       - elt-net
 
-  # ── 2. PostgreSQL — Data Warehouse (Snowflake yerine) ──────────────────────
+  # ── 2. PostgreSQL — Data Warehouse (instead of Snowflake) ──────────────────────
   postgres-dwh:
     image: postgres:15
     environment:
@@ -62,7 +62,7 @@ services:
       - postgres-dwh-data:/var/lib/postgresql/data
       - ./scripts/init_dwh.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
-      - "5433:5432"          # host'tan bağlanmak istersen: psql -h localhost -p 5433 -U dwh -d dwh
+      - "5433:5432"          # if you want to connect from your host: psql -h localhost -p 5433 -U dwh -d dwh
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "dwh"]
       interval: 10s
@@ -70,7 +70,7 @@ services:
     networks:
       - elt-net
 
-  # ── 3. MinIO — AWS S3 yerine ───────────────────────────────────────────────
+  # ── 3. MinIO — instead of AWS S3 ───────────────────────────────────────────────
   minio:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
@@ -89,7 +89,7 @@ services:
     networks:
       - elt-net
 
-  # MinIO bucket'ı otomatik oluşturur
+  # It creates automatically MinIO bucket 
   minio-init:
     image: minio/mc:latest
     depends_on:
