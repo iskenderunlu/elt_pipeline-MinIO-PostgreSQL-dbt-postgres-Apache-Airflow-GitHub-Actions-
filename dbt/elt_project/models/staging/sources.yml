@@ -22,7 +22,7 @@ sources:
         description: "Customer Records"
         columns:
           - name: customer_id
-            description: "Müşteri ID"
+            description: "Customer ID"
 
       - name: products
         description: "Product Catalogue"
